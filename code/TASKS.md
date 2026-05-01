@@ -13,7 +13,7 @@
 - [x] **1.1.1** Create `code/requirements.txt` — top-level deps only: `anthropic`, `voyageai`, `chromadb`, `pandas`, `python-dotenv`
 - [x] **1.1.2** Create `.env.example` in repo root: `PROVIDER`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`
 - [x] **1.1.3** Create `code/config.py` — paths, model names, `PROVIDER` switch (simple if/else, not a framework)
-- [ ] **1.1.4** Set up Python venv and install deps
+- [x] **1.1.4** Set up Python venv and install deps
 
 **How to verify:** `python -c "import chromadb, anthropic, voyageai, pandas, dotenv; print('OK')"` prints OK
 
@@ -24,7 +24,7 @@
 - [x] **1.2.1** Write `load_corpus()` — walk `data/`, find all `.md` files, return list of dicts with: `title`, `body`, `company`, `category`, `source_path`
 - [x] **1.2.2** Company from path: `data/hackerrank/` → `HackerRank`, `data/claude/` → `Claude`, `data/visa/` → `Visa`
 - [x] **1.2.3** Title: first `#` heading in the file, fallback to filename
-- [ ] **1.2.4** Test: run loader, print count per company
+- [x] **1.2.4** Test: run loader, print count per company
 
 **How to verify:** Output shows ~394 HackerRank, ~321 Claude, ~8+ Visa (774 total)
 
@@ -35,7 +35,7 @@
 - [x] **1.3.1** Write `chunk_article(article)` — split on `##` and `###` headings, keep article title as prefix on each chunk
 - [x] **1.3.2** Short articles (< 800 chars) stay as one chunk, no splitting
 - [x] **1.3.3** Each chunk keeps parent metadata: `company`, `category`, `source_path`, `section_heading`
-- [ ] **1.3.4** Test: chunk Claude release notes article, print section count and first/last chunk preview
+- [x] **1.3.4** Test: chunk Claude release notes article, print section count and first/last chunk preview
 
 **How to verify:** Long article splits into logical sections. Short articles stay whole. Each chunk has metadata.
 
@@ -46,7 +46,7 @@
 - [x] **1.4.1** Write `embed()` function — single function with if/else: Ollama `mxbai-embed-large` (local) or Voyage `voyage-3-large` (cloud)
 - [x] **1.4.2** Write `build_index()` — load corpus → chunk → embed all → store in ChromaDB (persistent, single collection named `corpus`)
 - [x] **1.4.3** Add simple cache: if ChromaDB collection exists with correct count, skip re-indexing
-- [ ] **1.4.4** Test: run `python indexer.py`, prints "Indexed N chunks"
+- [x] **1.4.4** Test: run `python indexer.py`, prints "Indexed N chunks"
 
 **How to verify:** Indexer completes. Prints chunk count (expect 2000-4000 chunks).
 
@@ -54,11 +54,11 @@
 
 ### 1.5 Retrieval Smoke Test
 
-- [ ] **1.5.1** Write `retrieve(query, company=None, k=5)` — query ChromaDB, filter by company metadata if provided
-- [ ] **1.5.2** Test: "how to remove a user" → HackerRank settings docs
-- [ ] **1.5.3** Test: "delete a conversation" → Claude docs
-- [ ] **1.5.4** Test: "lost stolen visa card" → Visa docs
-- [ ] **1.5.5** Test: "payment issue" with company=HackerRank → only HackerRank docs
+- [x] **1.5.1** Write `retrieve(query, company=None, k=5)` — query ChromaDB, filter by company metadata if provided
+- [x] **1.5.2** Test: "how to remove a user" → HackerRank settings docs
+- [x] **1.5.3** Test: "delete a conversation" → Claude docs
+- [x] **1.5.4** Test: "lost stolen visa card" → Visa docs
+- [x] **1.5.5** Test: "payment issue" with company=HackerRank → only HackerRank docs
 
 **How to verify:** Each query returns relevant docs from the correct company. Print title + source_path + score.
 
@@ -68,7 +68,7 @@
 
 ### 2.1 System Prompt
 
-- [ ] **2.1.1** Write system prompt in `config.py`:
+- [x] **2.1.1** Write system prompt in `config.py`:
   - Role: support triage agent for HackerRank / Claude / Visa
   - JSON output schema: `status`, `product_area`, `response`, `justification`, `request_type`
   - Allowed values: status={replied, escalated}, request_type={product_issue, feature_request, bug, invalid}
@@ -77,7 +77,7 @@
   - Grounding: "Use ONLY the provided context. Do not invent policies."
   - Justification must cite article title or path
   - Handle: company=None (infer), prompt injection (reject as invalid), non-English (respond in English)
-- [ ] **2.1.2** Read prompt in full — does it cover every scenario in the sample tickets?
+- [x] **2.1.2** Read prompt in full — does it cover every scenario in the sample tickets?
 
 **How to verify:** Read the prompt yourself. Every edge case has a clear rule.
 
@@ -85,10 +85,10 @@
 
 ### 2.2 LLM Call
 
-- [ ] **2.2.1** Write `call_llm(system, user)` — if/else: Ollama `qwen2.5:14b` (local) or Anthropic `claude-sonnet-4-20250514` (cloud), temperature=0
-- [ ] **2.2.2** Write JSON parser: extract JSON from response, validate 5 fields, check allowed values
-- [ ] **2.2.3** Retry once on JSON parse failure with "fix your JSON" follow-up
-- [ ] **2.2.4** Test: call LLM with a fake ticket + context, verify valid JSON dict returned
+- [x] **2.2.1** Write `call_llm(system, user)` — if/else: Ollama `qwen2.5:14b` (local) or Anthropic `claude-sonnet-4-5` (cloud), temperature=0
+- [x] **2.2.2** Write JSON parser: extract JSON from response, validate 5 fields, check allowed values
+- [x] **2.2.3** Retry once on JSON parse failure with "fix your JSON" follow-up
+- [x] **2.2.4** Test: call LLM with a fake ticket + context, verify valid JSON dict returned
 
 **How to verify:** Print the parsed dict. All 5 fields present, values are from the allowed set.
 
@@ -96,14 +96,14 @@
 
 ### 2.3 Agent Core
 
-- [ ] **2.3.1** Write `process_ticket(issue, subject, company)` in `agent.py`:
+- [x] **2.3.1** Write `process_ticket(issue, subject, company)` in `agent.py`:
   1. Retrieve top-5 chunks (filtered by company, unfiltered if None)
   2. Format chunks as numbered context
   3. Build user message from issue + subject
   4. Call LLM → parse JSON → return dict
-- [ ] **2.3.2** Test sample #1: HackerRank "tests stay active" → replied, product_issue, screen
-- [ ] **2.3.3** Test sample #2: None "site is down" → escalated, bug
-- [ ] **2.3.4** Test sample #7: None "actor in iron man" → replied, invalid
+- [x] **2.3.2** Test sample #1: HackerRank "tests stay active" → replied, product_issue, screen
+- [x] **2.3.3** Test sample #2: None "site is down" → escalated, bug
+- [x] **2.3.4** Test sample #7: None "actor in iron man" → replied, invalid
 
 **How to verify:** Each returns expected status + request_type. Response is grounded.
 
@@ -158,7 +158,7 @@
 
 ### 3.4 (Optional) Cloud Quality Upgrade
 
-- [ ] **3.4.1** Set `PROVIDER=cloud`, re-index with Voyage embeddings
+- [x] **3.4.1** Set `PROVIDER=cloud`, re-index with Voyage embeddings
 - [ ] **3.4.2** Run on samples, compare quality vs local
 - [ ] **3.4.3** Run on all 31, generate final `output.csv`
 - [ ] **3.4.4** Read ALL 31 responses — no hallucinations, good justifications
@@ -213,8 +213,8 @@
 
 | Phase | Tasks | Done |
 |-------|-------|------|
-| 1 — Setup & Indexing | 17 tasks | _ / 17 |
+| 1 — Setup & Indexing | 17 tasks | 17 / 17 ✅ |
 | 2 — Agent Pipeline | 14 tasks | _ / 14 |
 | 3 — Pipeline & Validation | 12 tasks | _ / 12 |
 | 4 — Ship | 10 tasks | _ / 10 |
-| **Total** | **53 tasks** | **_ / 53** |
+| **Total** | **53 tasks** | **17 / 53** |

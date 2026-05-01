@@ -6,6 +6,221 @@
 
 ---
 
+## 1. What I Have
+
+### The System
+
+A RAG-based support triage agent for three products: **HackerRank**, **Claude**, and **Visa**.
+
+**Inputs:**
+- `support_tickets/support_tickets.csv` — 29 real support tickets (issue, subject, company)
+- `data/` — 770 markdown support articles across 3 companies
+
+**Output:**
+- `support_tickets/output.csv` — 8 columns per ticket: `issue`, `subject`, `company`, `status`, `product_area`, `request_type`, `response`, `justification`
+
+**Code (4 files):**
+- `indexer.py` — loads corpus, sections it into chunks, embeds with Voyage AI, stores in ChromaDB
+- `agent.py` — per-ticket pipeline: query expansion → multi-query retrieval → LLM call → JSON parsing
+- `config.py` — all settings, model names, and the system prompt
+- `main.py` — CSV in/out, CLI flags (`--validate`, `--sample`, `--input`)
+
+**External services used:**
+- **Voyage AI `voyage-3-large`** — document embeddings (cloud)
+- **Anthropic `claude-sonnet-4-5`** — triage reasoning + response generation (cloud)
+- **ChromaDB** — local persistent vector store
+
+---
+
+## 2. What Is the Problem
+
+### The Challenge
+
+Given an unstructured support ticket — which may be vague, manipulative, non-English, or completely out of scope — produce a **structured, grounded** triage decision that tells support staff:
+
+1. Should this be **replied** to or **escalated** to a human? (`status`)
+2. What part of the product does it concern? (`product_area`)
+3. What kind of request is it? (`request_type`)
+4. What is the actual **response** to send the user, grounded in official documentation?
+5. Why was this decision made? (`justification`)
+
+### Why It's Hard
+
+- **Vocabulary mismatch**: Users say "I can't see the apply tab" — the corpus says "The Apply tab has been deprecated". Keyword search fails; semantic search is needed.
+- **Ambiguous escalation boundary**: "I had a payment issue" could be a FAQ or could need a transaction ID lookup. The boundary isn't always clear.
+- **Out-of-scope tickets**: Trivia, prompt injections, pleasantries — must be classified politely without being fooled.
+- **Corpus coverage gaps**: Visa has only 13 articles vs 436 for HackerRank. Some Visa questions may have no direct match.
+- **Determinism**: LLM calls are inherently non-deterministic. The same ticket can produce different answers on different runs.
+
+---
+
+## 3. What Is My Solution
+
+### Architecture
+
+```
+support_tickets.csv
+      │
+      ▼
+process_ticket()                     ← agent.py
+  │
+  ├─ Step 1: _expand_queries()       LLM generates 3 diverse search queries from the ticket
+  │
+  ├─ Step 2: _retrieve_multi_query() ChromaDB vector search per query, deduplicate by chunk,
+  │                                  keep highest score, return top-7
+  │
+  ├─ Step 3: _format_context()       Numbered context block with company + title + source
+  │
+  ├─ Step 4: call_llm()              Single Anthropic call with system prompt + context
+  │
+  └─ Step 5: _parse_response()       JSON extraction, field validation, one retry on failure
+        │
+        ▼
+  output.csv row (8 fields)
+```
+
+### Key Design Choices
+
+| Choice | What I did |
+|---|---|
+| Chunking | Section-level (split on `##`/`###` headings), not token-count |
+| Embedding | Voyage AI `voyage-3-large` — 32K context, no truncation |
+| Vector store | ChromaDB with company metadata filter |
+| Query strategy | LLM-generated query expansion → multi-query retrieval → deduplication |
+| LLM call | Single call per ticket — all 5 fields at once |
+| Escalation logic | Rule-based system prompt — explicit bullets for each scenario |
+| Determinism | temperature=0 on all LLM calls |
+
+---
+
+## 4. How I Built This
+
+### Step-by-step build process
+
+**Phase 1 — Corpus Indexing (`indexer.py`)**
+1. Walked `data/` recursively, parsed YAML frontmatter, extracted title/body/company/category
+2. Skipped `index.md` navigation files; filtered articles with <50 chars body
+3. Split each article on `##`/`###` headings → section chunks (100–3000 chars each)
+4. Short articles (<800 chars) kept as single chunk
+5. Long sections split further on paragraph boundaries
+6. Embedded 4753 chunks using Voyage AI `voyage-3-large` (batched 128 at a time)
+7. Stored in ChromaDB with metadata: `company`, `category`, `source_path`, `section_heading`
+
+**Phase 2 — System Prompt (`config.py`)**
+1. Wrote initial prompt with JSON schema, escalation rules, reply rules
+2. Read all 10 sample tickets manually, checked every expected output
+3. Found and fixed 3 bugs: lost-card rule too aggressive; account deletion with Google login mismatch; vague tickets typed as `invalid` instead of `product_issue`
+4. Added: refund escalation, impossible-action escalation, mixed-intent type rule, canonical product_area taxonomy
+
+**Phase 3 — Agent Pipeline (`agent.py`)**
+1. Built `call_llm()` — if/else for cloud (Anthropic) vs local (Ollama)
+2. Built `_parse_response()` — strips JSON fences, validates 5 fields, retries once on failure with hard fallback
+3. Built `process_ticket()` — originally single-query retrieve, then upgraded to query expansion
+4. Added `_expand_queries()` — one cheap LLM call with a minimal prompt, returns 3 diverse queries + original
+5. Added `_retrieve_multi_query()` — runs retrieve per query, deduplicates by `source_path + section_heading`
+
+**Phase 4 — CSV Pipeline (`main.py`)**
+1. Read input CSV (handles both `Issue` and `issue` column name casing)
+2. Run pipeline with progress output
+3. Write output with `csv.QUOTE_ALL` — handles newlines and commas in responses
+4. `--validate` mode: prints accuracy table against `sample_support_tickets.csv`
+
+**Iteration process:**
+- Ran `--validate` repeatedly to catch regressions after every prompt change
+- Chased each failure through query expansion debug → retrieved chunks → justification text
+- Raised `RETRIEVAL_TOP_K` from 5 → 7 after diagnosing a case where correct article was retrieved but drowned by noise
+
+---
+
+## 5. Why I Made Different Decisions
+
+### Embedding model: Voyage AI vs others
+
+**Options considered:** Ollama `mxbai-embed-large` (local), OpenAI `text-embedding-3-large`, Voyage `voyage-3-large`
+
+**Why Voyage AI:**
+- `mxbai-embed-large` has a 512 token context. Markdown articles average 2000+ chars. Chunks were being silently truncated, degrading retrieval quality significantly.
+- Voyage `voyage-3-large` handles 32K tokens per text — no truncation at all on any article.
+- Ranked top-2 on MTEB (Massive Text Embedding Benchmark) retrieval tasks.
+- Cost: ~$0.18/1M tokens → indexing 4753 chunks cost under $0.01.
+
+### LLM model: Claude Sonnet 4.5 vs GPT-4o vs Opus
+
+**Why Sonnet over GPT-4o:** I'm using Anthropic already for embeddings (Voyage), so one provider. Sonnet 4.5 follows structured output instructions extremely reliably — critical for getting consistent JSON with exact field names.
+
+**Why not Opus:** 5× the cost (~$2.50 vs $0.30 for 29 tickets), ~10s per ticket vs ~3s. For classification tasks with a strong system prompt, Sonnet is sufficient. Opus would improve prose quality but not triage accuracy.
+
+**Why temperature=0:** Reproducibility. Same ticket → same answer. Classification tasks don't benefit from sampling variability — they benefit from rule-following, which temperature=0 maximises.
+
+### Chunking: section-level vs token-count
+
+**Why section-level:**
+- Support articles are already structured with `##`/`###` headings. Each section covers one topic.
+- Token-count chunking would split mid-concept — e.g., cutting a "Delete account" procedure at step 3 of 5.
+- No tokenizer dependency (simpler install).
+
+**Trade-off:** Section sizes vary widely (100–3000 chars). I handled this by splitting oversized sections on paragraph boundaries and keeping tiny sections (>100 chars) only.
+
+### Single LLM call vs multi-step agent
+
+**Why single call:**
+- **Coherence**: The LLM sees ticket + context and produces classification + response together. A separate classify → route → generate chain loses context between steps.
+- **Debuggability**: One prompt to tune. When a classification is wrong, I fix one rule, re-run. With three steps, any of the three could be wrong.
+- **Cost**: 29 calls vs 87–116 calls for a 3-4 step pipeline.
+
+**Trade-off:** A multi-step agent could theoretically do clarification rounds ("do you mean X or Y?"). Not needed for batch triage.
+
+### Query expansion: why add the extra LLM call
+
+**The problem it solves:**
+Ticket subject: "How to Remove a User"
+Literal retrieval query: `"How to Remove a User How to Remove a User"`
+This returns interview/question removal docs, not account management docs.
+
+After expansion, the LLM generates:
+- "delete interviewer from HackerRank hiring account"
+- "remove team member user management settings"
+- "deactivate user HackerRank platform admin"
+
+All three return the correct article.
+
+**Why it's worth the extra call:** The expansion call uses a 3-line system prompt — it costs ~$0.0001 per ticket. The quality improvement is significant for any ticket where the user's vocabulary differs from the corpus vocabulary.
+
+### RETRIEVAL_TOP_K = 7
+
+Initially set to 5. Raised to 7 after diagnosing a case where the correct article was being retrieved at rank 1 (score 0.79) but the model escalated anyway because surrounding chunks about "Cancel Invite" and "Revoke Access" created noise that appeared to suggest account-level action was needed.
+
+With 7 chunks, the correct article has more weight relative to the noise. Combined with the grounding rule clarification ("if context directly answers the question, REPLY — don't escalate just because unrelated articles are also present"), this fixed the regression.
+
+### Escalation philosophy: err on the side of escalation
+
+**Rule:** When in doubt, escalate.
+
+**Why:** A false escalation (sending a solvable ticket to a human) costs support team time. A false reply (sending a wrong answer, or worse a hallucinated phone number, to a user) damages trust and potentially causes real harm (e.g., wrong fraud reporting instructions). The asymmetry of cost strongly favours over-escalation.
+
+This is why the system prompt has 12 explicit escalation bullets and only generic reply rules.
+
+---
+
+## Quick Reference
+
+| Parameter | Value | Why |
+|---|---|---|
+| Embedding model | `voyage-3-large` | 32K context, top MTEB ranking, $0.01 to index |
+| LLM model | `claude-sonnet-4-5` | Reliable structured output, fast, cheap |
+| Temperature | `0` | Deterministic classification |
+| Chunk strategy | Section-level (headings) | Semantic coherence, no tokenizer needed |
+| Retrieval top-k | `7` | More signal vs noise for borderline cases |
+| Queries per ticket | `4` (3 expanded + 1 original) | Catches vocabulary mismatches |
+| LLM calls per ticket | `2` (1 expand + 1 triage) | Coherent output, low cost |
+| Total corpus chunks | `4753` | All 770 articles, section-split |
+| Sample accuracy | `10/10` status + type | Validated before full run |
+| Total tickets processed | `29` | Full `support_tickets.csv` |
+| Approx. total API cost | `~$0.50` | Voyage indexing ~$0.01 + 29 triage calls |
+
+
+---
+
 ## Section 1: Architecture & Approach
 
 ### Q: Walk me through your agent's architecture.

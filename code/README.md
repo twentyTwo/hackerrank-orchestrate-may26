@@ -33,7 +33,7 @@ process_ticket()          ← agent.py
 ```
 
 **Key design decisions:**
-- Single LLM call per ticket (all 5 fields at once) — coherent and cost-efficient
+- **2 LLM calls per ticket** (1 query expansion + 1 triage) — coherent output, vocabulary-aware retrieval
 - Query expansion before retrieval — catches vocabulary mismatches between ticket and article titles
 - Section-level chunking (split on `##`/`###` headings) — preserves semantic units
 - Grounding rule baked into system prompt — no hallucinated phone numbers, URLs, or policies
@@ -106,7 +106,7 @@ All settings are in `code/config.py`. Secrets come from `.env` only — never ha
 | `PROVIDER` | `local` | `cloud` = Voyage AI + Claude; `local` = Ollama |
 | `ANTHROPIC_API_KEY` | — | Required for `PROVIDER=cloud` (LLM) |
 | `VOYAGE_API_KEY` | — | Required for `PROVIDER=cloud` (embeddings) |
-| `RETRIEVAL_TOP_K` | `5` | Chunks returned per query |
+| `RETRIEVAL_TOP_K` | `7` | Chunks returned per query (after deduplication across expanded queries) |
 | `EMBED_MODEL_CLOUD` | `voyage-3-large` | Voyage AI embedding model |
 | `LLM_MODEL_CLOUD` | `claude-sonnet-4-5` | Anthropic chat model |
 | `EMBED_MODEL_LOCAL` | `mxbai-embed-large` | Ollama embedding model |

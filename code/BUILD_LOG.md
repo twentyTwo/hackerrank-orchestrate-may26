@@ -67,7 +67,20 @@ Each entry follows this format:
 **Files touched:** `code/indexer.py`
 
 #### Task 1.4 — Embedding & Indexing
-*(pending)*
+
+**What:** `embed()`, `build_index()`, `get_collection()`, `retrieve()` functions in `indexer.py`. Embedding is a single function with if/else on PROVIDER (no wrapper class, no factory). ChromaDB persists to `chroma_db/` with a single collection. Skip-if-exists logic checks both collection presence and document count.
+
+**Bug fixed:** ChromaDB ≥ 0.6.0 changed `list_collections()` to return `List[str]` directly instead of `List[Collection]` objects. The original code did `[c.name for c in client.list_collections()]` which would crash on `.name` since strings don't have that attribute. Fixed both occurrences (`build_index` and `get_collection`).
+
+**Also fixed:** Added `requests>=2.32.0` to `requirements.txt` — it's used by the Ollama embedding function (`_embed_ollama`) but was missing from top-level deps.
+
+**Why these design choices:**
+- Single `embed()` with if/else: switching backends is a config change, not a new code path. No abstraction needed for two cases.
+- Persistent ChromaDB: re-embedding ~3K chunks via Ollama (sequential API calls) takes several minutes. Persisting once and reusing saves iteration time.
+- Skip logic checks `count > 0`: protects against partially built collections from interrupted runs.
+- `requests` imported lazily inside `_embed_ollama`: avoids the import at startup when running cloud mode.
+
+**Files touched:** `code/indexer.py`, `code/requirements.txt`
 
 #### Task 1.5 — Retrieval Smoke Test
 *(pending)*

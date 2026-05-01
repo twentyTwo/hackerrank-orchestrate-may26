@@ -43,9 +43,9 @@
 
 ### 1.4 Embedding & Indexing
 
-- [ ] **1.4.1** Write `embed()` function — single function with if/else: Ollama `mxbai-embed-large` (local) or Voyage `voyage-3-large` (cloud)
-- [ ] **1.4.2** Write `build_index()` — load corpus → chunk → embed all → store in ChromaDB (in-memory, single collection named `corpus`)
-- [ ] **1.4.3** Add simple cache: if ChromaDB collection exists with correct count, skip re-indexing
+- [x] **1.4.1** Write `embed()` function — single function with if/else: Ollama `mxbai-embed-large` (local) or Voyage `voyage-3-large` (cloud)
+- [x] **1.4.2** Write `build_index()` — load corpus → chunk → embed all → store in ChromaDB (persistent, single collection named `corpus`)
+- [x] **1.4.3** Add simple cache: if ChromaDB collection exists with correct count, skip re-indexing
 - [ ] **1.4.4** Test: run `python indexer.py`, prints "Indexed N chunks"
 
 **How to verify:** Indexer completes. Prints chunk count (expect 2000-4000 chunks).

@@ -278,18 +278,33 @@ def embed(texts: list[str]) -> list[list[float]]:
         return _embed_ollama(texts)
 
 
+def _clean_for_embed(text: str) -> str:
+    """Strip token-dense noise (image URLs, bare URLs, code blocks) before embedding.
+    Full text is still stored in ChromaDB — only embedding input is cleaned.
+    mxbai-embed-large has a 512 token context. Dense content (code, tables, JSON)
+    tokenizes at ~2 chars/token so we cap at 800 chars to stay safely under limit.
+    """
+    # Remove markdown images: ![alt](url)
+    text = re.sub(r"!\[.*?\]\(.*?\)", "", text)
+    # Remove bare URLs
+    text = re.sub(r"https?://\S+", "", text)
+    # Remove fenced code blocks (token-dense)
+    text = re.sub(r"```.*?```", "[code block]", text, flags=re.DOTALL)
+    # Collapse excess whitespace
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r" {2,}", " ", text)
+    # Hard cap: 800 chars guarantees < 512 tokens even for dense content
+    return text[:800].strip()
+
+
 def _embed_ollama(texts: list[str]) -> list[list[float]]:
-    import requests
+    import ollama
     vectors = []
     for i, text in enumerate(texts):
-        resp = requests.post(
-            "http://localhost:11434/api/embeddings",
-            json={"model": EMBED_MODEL_LOCAL, "prompt": text},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        vectors.append(resp.json()["embedding"])
-        if (i + 1) % 100 == 0:
+        clean = _clean_for_embed(text)
+        response = ollama.embed(model=EMBED_MODEL_LOCAL, input=clean)
+        vectors.append(response["embeddings"][0])
+        if (i + 1) % 200 == 0:
             print(f"  Embedded {i + 1}/{len(texts)}...")
     return vectors
 
@@ -321,21 +336,21 @@ def build_index(force: bool = False) -> chromadb.Collection:
     """
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
 
-    # Check if already indexed
-    existing = [c.name for c in client.list_collections()]
-    if CHROMA_COLLECTION in existing and not force:
+    # Use try/except instead of list_collections() — works across all ChromaDB versions
+    try:
         collection = client.get_collection(CHROMA_COLLECTION)
-        count = collection.count()
-        if count > 0:
-            print(f"Index already exists: {count} chunks in '{CHROMA_COLLECTION}'. Skipping re-index.")
-            print("Run with --force to re-index.")
-            return collection
-        # Empty collection — fall through and build
+        if not force:
+            count = collection.count()
+            if count > 0:
+                print(f"Index already exists: {count} chunks in '{CHROMA_COLLECTION}'. Skipping re-index.")
+                print("Run with --force to re-index.")
+                return collection
+        # force=True or empty collection — delete and rebuild
         client.delete_collection(CHROMA_COLLECTION)
-
-    if CHROMA_COLLECTION in existing and force:
-        client.delete_collection(CHROMA_COLLECTION)
-        print(f"Deleted existing collection '{CHROMA_COLLECTION}' (--force).")
+        if force:
+            print(f"Deleted existing collection '{CHROMA_COLLECTION}' (--force).")
+    except Exception:
+        pass  # Collection does not exist yet — create it below
 
     collection = client.create_collection(
         name=CHROMA_COLLECTION,
@@ -358,7 +373,7 @@ def build_index(force: bool = False) -> chromadb.Collection:
         batch_vectors = vectors[i : i + batch_size]
 
         collection.add(
-            ids=[f"chunk_{i + j}" for j in range(len(batch_chunks))],
+            ids=[f"chunk_{i + j}" for j in range(len(batch_chunks))],  # i is the batch start offset, j is position within batch
             embeddings=batch_vectors,
             documents=[c["text"] for c in batch_chunks],
             metadatas=[
@@ -386,12 +401,12 @@ def build_index(force: bool = False) -> chromadb.Collection:
 def get_collection() -> chromadb.Collection:
     """Load the existing ChromaDB collection. Raises if not yet indexed."""
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    existing = [c.name for c in client.list_collections()]
-    if CHROMA_COLLECTION not in existing:
+    try:
+        return client.get_collection(CHROMA_COLLECTION)
+    except Exception:
         raise RuntimeError(
             f"Collection '{CHROMA_COLLECTION}' not found. Run: python indexer.py"
         )
-    return client.get_collection(CHROMA_COLLECTION)
 
 
 def retrieve(query: str, company: str | None = None, k: int = 5) -> list[dict]:

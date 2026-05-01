@@ -32,7 +32,7 @@ EMBED_MODEL_LOCAL = "mxbai-embed-large"     # Ollama
 EMBED_MODEL_CLOUD = "voyage-3-large"         # Voyage AI
 
 # LLM models
-LLM_MODEL_LOCAL = "qwen2.5:14b"                     # Ollama
+LLM_MODEL_LOCAL = "qwen3.5:9b"                       # Ollama
 LLM_MODEL_CLOUD = "claude-sonnet-4-20250514"         # Anthropic
 
 # ---------------------------------------------------------------------------

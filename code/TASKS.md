@@ -10,9 +10,9 @@
 
 ### 1.1 Project Setup
 
-- [ ] **1.1.1** Create `code/requirements.txt` — top-level deps only: `anthropic`, `voyageai`, `chromadb`, `pandas`, `python-dotenv`
-- [ ] **1.1.2** Create `.env.example` in repo root: `PROVIDER`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`
-- [ ] **1.1.3** Create `code/config.py` — paths, model names, `PROVIDER` switch (simple if/else, not a framework)
+- [x] **1.1.1** Create `code/requirements.txt` — top-level deps only: `anthropic`, `voyageai`, `chromadb`, `pandas`, `python-dotenv`
+- [x] **1.1.2** Create `.env.example` in repo root: `PROVIDER`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`
+- [x] **1.1.3** Create `code/config.py` — paths, model names, `PROVIDER` switch (simple if/else, not a framework)
 - [ ] **1.1.4** Set up Python venv and install deps
 
 **How to verify:** `python -c "import chromadb, anthropic, voyageai, pandas, dotenv; print('OK')"` prints OK
@@ -21,9 +21,9 @@
 
 ### 1.2 Corpus Loader
 
-- [ ] **1.2.1** Write `load_corpus()` — walk `data/`, find all `.md` files, return list of dicts with: `title`, `body`, `company`, `category`, `source_path`
-- [ ] **1.2.2** Company from path: `data/hackerrank/` → `HackerRank`, `data/claude/` → `Claude`, `data/visa/` → `Visa`
-- [ ] **1.2.3** Title: first `#` heading in the file, fallback to filename
+- [x] **1.2.1** Write `load_corpus()` — walk `data/`, find all `.md` files, return list of dicts with: `title`, `body`, `company`, `category`, `source_path`
+- [x] **1.2.2** Company from path: `data/hackerrank/` → `HackerRank`, `data/claude/` → `Claude`, `data/visa/` → `Visa`
+- [x] **1.2.3** Title: first `#` heading in the file, fallback to filename
 - [ ] **1.2.4** Test: run loader, print count per company
 
 **How to verify:** Output shows ~394 HackerRank, ~321 Claude, ~8+ Visa (774 total)
@@ -32,9 +32,9 @@
 
 ### 1.3 Section Chunker
 
-- [ ] **1.3.1** Write `chunk_article(article)` — split on `##` and `###` headings, keep article title as prefix on each chunk
-- [ ] **1.3.2** Short articles (< 800 chars) stay as one chunk, no splitting
-- [ ] **1.3.3** Each chunk keeps parent metadata: `company`, `category`, `source_path`, `section_heading`
+- [x] **1.3.1** Write `chunk_article(article)` — split on `##` and `###` headings, keep article title as prefix on each chunk
+- [x] **1.3.2** Short articles (< 800 chars) stay as one chunk, no splitting
+- [x] **1.3.3** Each chunk keeps parent metadata: `company`, `category`, `source_path`, `section_heading`
 - [ ] **1.3.4** Test: chunk Claude release notes article, print section count and first/last chunk preview
 
 **How to verify:** Long article splits into logical sections. Short articles stay whole. Each chunk has metadata.

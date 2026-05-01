@@ -25,13 +25,46 @@ Each entry follows this format:
 ### Phase 1: Setup & Corpus Indexing
 
 #### Task 1.1 — Project Setup
-*(pending)*
+
+**What:** Created `code/requirements.txt`, `.env.example`, `code/config.py`, added `chroma_db/` to `.gitignore`.
+
+**Why:**
+- `requirements.txt` pins only the 5 top-level packages we actually need. No `pip freeze` dump — that creates noise and version conflicts across machines.
+- `.env.example` documents all env vars in one place. `PROVIDER=local` is the default so the agent works out of the box without any API keys.
+- `config.py` centralises paths, model names, and the system prompt. This means you change things in one place, not scattered across files.
+- `chroma_db/` added to `.gitignore` — it’s a runtime artefact (the vector index), not source code. Committing it would bloat the repo.
+
+**Trade-off:** Could have used a `pyproject.toml` instead of `requirements.txt`. Rejected — requirements.txt is simpler and universally understood.
+
+**Files touched:** `code/requirements.txt`, `.env.example`, `code/config.py`, `.gitignore`
 
 #### Task 1.2 — Corpus Loader
-*(pending)*
+
+**What:** `load_corpus()` in `indexer.py`. Walks `data/` recursively, parses YAML frontmatter, extracts title/body/company/category/source_path for each article. Skips `index.md` navigation files and files shorter than 50 chars.
+
+**Why:**
+- The markdown files have YAML frontmatter (`---`) with metadata like `title`. We parse that first, then fall back to the first `#` heading, then the filename. This gives us the best title for each article.
+- Company is inferred from the top-level directory (`data/hackerrank/` → `HackerRank`). No hardcoding needed.
+- Category comes from the second-level directory (`screen`, `interviews`, `pricing-and-billing`). This becomes a metadata field in ChromaDB, usable for debugging retrievals.
+- `source_path` is stored relative to `data/` (not absolute) so the project works on any machine.
+
+**Trade-off:** We skip `index.md` files. These are navigation pages with article lists, not content — including them would add noise to retrieval.
+
+**Files touched:** `code/indexer.py`
 
 #### Task 1.3 — Section Chunker
-*(pending)*
+
+**What:** `chunk_article()` and `chunk_corpus()` in `indexer.py`. Splits articles on `##`/`###` headings. Short articles (≈ fewer than 800 chars body) stay whole. Sections exceeding 3000 chars are further split on paragraph boundaries.
+
+**Why:**
+- The support documents are already structured with headings. Each section is about one specific topic. Splitting on headings gives semantically coherent chunks without needing a tokenizer.
+- Short articles (many Visa docs, FAQs) don’t need splitting — they’re already small enough.
+- Very long sections (e.g. the Claude release notes covering months of updates) would dominate a single chunk’s context window. We split those further on paragraph boundaries to keep them manageable.
+- Each chunk **prefixes the article title** (e.g. `Managing Tests — Expiration Settings\n\n<section body>`). This means even if a section is retrieved without the article title in the heading, the LLM still knows what article it came from.
+
+**Trade-off:** We chose heading-based over token-count chunking. Token-count with overlap (the typical approach) requires a tokenizer dependency and can cut mid-sentence. Heading-based is faster to build, easier to debug, and produces cleaner context windows for this corpus.
+
+**Files touched:** `code/indexer.py`
 
 #### Task 1.4 — Embedding & Indexing
 *(pending)*

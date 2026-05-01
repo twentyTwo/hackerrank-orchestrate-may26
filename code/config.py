@@ -38,7 +38,7 @@ LLM_MODEL_CLOUD = "claude-sonnet-4-5"                # Anthropic
 # ---------------------------------------------------------------------------
 # Retrieval settings
 # ---------------------------------------------------------------------------
-RETRIEVAL_TOP_K = 5
+RETRIEVAL_TOP_K = 7
 CHROMA_COLLECTION = "corpus"
 
 # ---------------------------------------------------------------------------
@@ -99,6 +99,7 @@ IMPORTANT: "Lost/stolen card" questions asking WHERE or HOW to report → REPLY 
 GROUNDING RULE:
 Use ONLY the information in the provided context sections. Do not invent policies, steps, phone numbers, or URLs.
 If the context does not cover the issue, escalate instead of guessing.
+If the context directly answers the question (even partially), REPLY — do not escalate just because other unrelated articles are also present in the context.
 
 PRODUCT AREA VALUES — use the most specific match; fall back to "general" if none fit:
 HackerRank: screen, interviews, library, engage, skillup, settings, billing, account-management, test-management, general

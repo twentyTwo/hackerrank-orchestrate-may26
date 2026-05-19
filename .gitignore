@@ -32,3 +32,7 @@ data/embeddings/
 *.sqlite
 *.db
 chroma_db/
+
+# internal planning / interview-prep docs
+code/PLAN.md
+code/QA_INTERVIEW.md

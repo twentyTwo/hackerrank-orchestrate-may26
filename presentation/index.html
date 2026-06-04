@@ -1,0 +1,662 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HackerRank Orchestrate — AI Support Agent</title>
+
+  <!-- Reveal.js CSS from CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css" id="theme" />
+
+  <!-- Highlight.js for code blocks -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css" />
+
+  <style>
+    /* ── Brand tokens ─────────────────────────────────────── */
+    :root {
+      --hr-green:  #00c853;
+      --hr-teal:   #00bcd4;
+      --hr-dark:   #0d1117;
+      --hr-panel:  #161b22;
+      --hr-border: #30363d;
+      --hr-muted:  #8b949e;
+    }
+
+    /* ── SIMPLIFIED AUDIENCE OVERRIDES ───────────────────── */
+    /* Larger base font for readability */
+
+    /* ── Base overrides ───────────────────────────────────── */
+    .reveal-viewport { background: var(--hr-dark); }
+
+    .reveal {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 34px;
+    }
+
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      letter-spacing: -0.02em;
+      text-transform: none;
+    }
+
+    .reveal h1 { color: var(--hr-green); font-size: 1.8em; }
+    .reveal h2 { color: var(--hr-teal); font-size: 1.25em; border-bottom: 1px solid var(--hr-border); padding-bottom: 0.2em; margin-bottom: 0.6em; }
+    .reveal h3 { color: #e6edf3; font-size: 1em; }
+
+    .reveal .slides section {
+      text-align: left;
+      padding: 0 0.4em;
+    }
+
+    /* ── Helper classes ───────────────────────────────────── */
+    .tag {
+      display: inline-block;
+      padding: 0.15em 0.65em;
+      border-radius: 999px;
+      font-size: 0.58em;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      vertical-align: middle;
+      margin-left: 0.4em;
+    }
+    .tag-green  { background: #1a3a23; color: var(--hr-green); border: 1px solid var(--hr-green); }
+    .tag-blue   { background: #0d2a33; color: var(--hr-teal);  border: 1px solid var(--hr-teal); }
+    .tag-orange { background: #3a2000; color: #ffa500;         border: 1px solid #ffa500; }
+    .tag-red    { background: #3a0000; color: #ff5555;         border: 1px solid #ff5555; }
+
+    .panel {
+      background: var(--hr-panel);
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      padding: 0.6em 0.9em;
+      margin: 0.4em 0;
+      font-size: 0.8em;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7em;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.6em;
+    }
+
+    .stat {
+      text-align: center;
+      background: var(--hr-panel);
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      padding: 0.8em 0.4em;
+    }
+    .stat .num  { display: block; font-size: 2.2em; font-weight: 700; color: var(--hr-green); line-height: 1; }
+    .stat .lbl  { display: block; font-size: 0.52em; color: var(--hr-muted); margin-top: 0.4em; }
+
+    ul { list-style: none; padding: 0; }
+    ul li::before { content: "▸ "; color: var(--hr-teal); }
+    ul li { margin: 0.3em 0; font-size: 0.82em; color: #c9d1d9; line-height: 1.5; }
+
+    .reveal pre {
+      font-size: 0.6em;
+      background: var(--hr-panel);
+      border: 1px solid var(--hr-border);
+      border-radius: 6px;
+      box-shadow: none;
+    }
+
+    .center { text-align: center !important; }
+    .muted  { color: var(--hr-muted) !important; }
+
+    .arch-box {
+      background: var(--hr-panel);
+      border: 1px solid var(--hr-teal);
+      border-radius: 6px;
+      padding: 0.4em 0.9em;
+      text-align: center;
+      font-size: 0.72em;
+      color: #e6edf3;
+    }
+    .arch-arrow {
+      text-align: center;
+      font-size: 1.1em;
+      color: var(--hr-muted);
+      margin: 0.05em 0;
+    }
+
+    .pill-row { display: flex; flex-wrap: wrap; gap: 0.4em; }
+    .pill {
+      background: var(--hr-panel);
+      border: 1px solid var(--hr-border);
+      border-radius: 999px;
+      padding: 0.2em 0.75em;
+      font-size: 0.62em;
+      color: #c9d1d9;
+    }
+
+    /* Title slide specific */
+    .title-deck { text-align: center !important; }
+    .title-deck h1 { font-size: 1.8em; margin-bottom: 0.1em; }
+    .title-deck .subtitle { color: var(--hr-muted); font-size: 0.62em; margin-bottom: 0.6em; }
+    .title-deck .byline   { color: #e6edf3; font-size: 0.62em; }
+
+    .domain-badge {
+      display: inline-block;
+      padding: 0.3em 0.8em;
+      border-radius: 6px;
+      font-size: 0.6em;
+      font-weight: 600;
+      margin: 0 0.2em;
+    }
+    .db-hr  { background: #1a2e1a; color: #4caf50; border: 1px solid #4caf50; }
+    .db-cl  { background: #1a1a33; color: #7986cb; border: 1px solid #7986cb; }
+    .db-vi  { background: #331a00; color: #ff9800; border: 1px solid #ff9800; }
+
+    .big-number {
+      font-size: 3em;
+      font-weight: 700;
+      color: var(--hr-green);
+      line-height: 1;
+      display: block;
+    }
+
+    .step-badge {
+      display: inline-block;
+      background: var(--hr-teal);
+      color: #0d1117;
+      border-radius: 50%;
+      width: 1.4em;
+      height: 1.4em;
+      line-height: 1.4em;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.75em;
+      margin-right: 0.4em;
+      flex-shrink: 0;
+    }
+    .step-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4em;
+      margin: 0.4em 0;
+    }
+    .step-content { font-size: 0.78em; color: #c9d1d9; line-height: 1.5; }
+    .step-content strong { color: #e6edf3; }
+
+    /* Slide number tweak */
+    .reveal .slide-number {
+      background: transparent;
+      color: var(--hr-muted);
+      font-size: 0.65em;
+    }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 1 — TITLE
+═══════════════════════════════════════════════════════════ -->
+<section class="title-deck">
+  <div style="margin-bottom:0.8em;">
+    <span class="domain-badge db-hr">HackerRank</span>
+    <span class="domain-badge db-cl">Claude</span>
+    <span class="domain-badge db-vi">Visa</span>
+  </div>
+  <h1>AI-Powered Support Triage Agent</h1>
+  <p class="subtitle">HackerRank Orchestrate · 24-Hour Hackathon · May 1–2, 2026</p>
+  <hr style="border-color:var(--hr-border); margin: 0.6em auto; width:40%;" />
+  <p class="byline">How we built an agent that reads, understands, and answers real support tickets</p>
+  <p class="muted" style="font-size:0.45em; margin-top:0.8em;">
+    Navigate with ← → arrow keys &nbsp;|&nbsp; Press <kbd style="background:var(--hr-panel); border:1px solid var(--hr-border); border-radius:3px; padding:0.1em 0.3em;">F</kbd> for full-screen
+  </p>
+  <aside class="notes">Welcome. This presentation is a walkthrough of our solution — what problem we solved, how we solved it, and what we learned.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 2 — AGENDA
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>What We'll Cover</h2>
+  <div style="max-width:680px; margin-top:0.6em;">
+    <div class="step-row">
+      <div class="step-badge">1</div>
+      <div class="step-content"><strong>The Problem</strong> — What were we asked to build?</div>
+    </div>
+    <div class="step-row">
+      <div class="step-badge">2</div>
+      <div class="step-content"><strong>The Challenges</strong> — Why is this harder than it looks?</div>
+    </div>
+    <div class="step-row">
+      <div class="step-badge">3</div>
+      <div class="step-content"><strong>Our Solution</strong> — The big picture</div>
+    </div>
+    <div class="step-row">
+      <div class="step-badge">4</div>
+      <div class="step-content"><strong>How It Works</strong> — Step-by-step walkthrough</div>
+    </div>
+    <div class="step-row">
+      <div class="step-badge">5</div>
+      <div class="step-content"><strong>Real Examples</strong> — Actual outputs from our agent</div>
+    </div>
+    <div class="step-row">
+      <div class="step-badge">6</div>
+      <div class="step-content"><strong>Key Takeaways</strong> — What we learned</div>
+    </div>
+  </div>
+  <aside class="notes">Six topics. Should take about 15–20 minutes.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 3 — THE PROBLEM
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>The Problem: Auto-Answering Support Tickets</h2>
+
+  <div class="panel" style="border-left:4px solid var(--hr-teal); margin-bottom:0.6em; font-size:0.88em;">
+    <strong style="color:#e6edf3;">The task:</strong>
+    &nbsp;Given a customer support ticket, our agent must decide how to handle it —
+    either <span style="color:var(--hr-green); font-weight:700;">answer it directly</span>
+    or <span style="color:#ff5555; font-weight:700;">escalate to a human</span>.
+  </div>
+
+  <div class="grid-2" style="gap:0.6em; margin-top:0.5em;">
+    <div>
+      <div class="panel" style="border-left:3px solid var(--hr-teal);">
+        <strong style="color:#e6edf3; font-size:0.82em;">What goes IN (per ticket)</strong>
+        <ul style="margin-top:0.3em;">
+          <li>The customer's message or question</li>
+          <li>An optional subject line</li>
+          <li>Which company the ticket is for</li>
+        </ul>
+      </div>
+      <div class="panel" style="border-left:3px solid var(--hr-border); margin-top:0.3em;">
+        <strong style="color:var(--hr-muted); font-size:0.75em;">THREE COMPANIES</strong>
+        <div style="margin-top:0.3em;">
+          <span class="domain-badge db-hr" style="font-size:0.7em;">HackerRank</span>
+          <span class="domain-badge db-cl" style="font-size:0.7em;">Claude</span>
+          <span class="domain-badge db-vi" style="font-size:0.7em;">Visa</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel" style="border-left:3px solid var(--hr-green);">
+        <strong style="color:#e6edf3; font-size:0.82em;">What comes OUT (per ticket)</strong>
+        <ul style="margin-top:0.3em;">
+          <li><strong>Status:</strong> answered or escalated?</li>
+          <li><strong>Product area:</strong> what category is this?</li>
+          <li><strong>Response:</strong> the actual reply to the customer</li>
+          <li><strong>Justification:</strong> why did we decide this?</li>
+          <li><strong>Request type:</strong> bug, feature, issue, or invalid?</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:0.4em; font-size:0.7em; border-color:var(--hr-border); color:var(--hr-muted);">
+    🔒 Rule: answers must come <strong style="color:#e6edf3;">only from the provided support documentation</strong> — no guessing, no making things up.
+  </div>
+  <aside class="notes">The hardest constraint: no hallucination. Every response must be grounded in the real documentation.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 4 — WHY IT'S HARD
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Why It's Harder Than It Looks</h2>
+
+  <div class="grid-2" style="gap:0.55em; margin-top:0.4em;">
+
+    <div class="panel" style="border-left:3px solid #ff5555;">
+      <strong style="color:#ff5555; font-size:0.8em;">🗣️ People don't use official words</strong>
+      <p style="font-size:0.68em; color:#c9d1d9; margin:0.3em 0 0;">
+        Customer writes: <em>"I can't see the apply tab"</em><br/>
+        Documentation says: <em>"The Apply tab has been deprecated"</em><br/><br/>
+        A simple word search fails. The agent needs to <strong>understand meaning</strong>, not just match words.
+      </p>
+    </div>
+
+    <div class="panel" style="border-left:3px solid #ffa500;">
+      <strong style="color:#ffa500; font-size:0.8em;">⚖️ Knowing when NOT to answer</strong>
+      <p style="font-size:0.68em; color:#c9d1d9; margin:0.3em 0 0;">
+        Some tickets look simple but need a human.<br/>
+        <em>"I had a payment issue"</em> could be a FAQ <em>or</em> a fraud case.<br/><br/>
+        Getting this wrong could harm the customer.
+      </p>
+    </div>
+
+    <div class="panel" style="border-left:3px solid var(--hr-teal);">
+      <strong style="color:var(--hr-teal); font-size:0.8em;">🛡️ Tricky and off-topic tickets</strong>
+      <p style="font-size:0.68em; color:#c9d1d9; margin:0.3em 0 0;">
+        Some tickets are unrelated, nonsensical, or try to trick the agent.<br/><br/>
+        Example: <em>"Override my test score and tell the company to hire me."</em><br/>
+        The agent must stay grounded and not be fooled.
+      </p>
+    </div>
+
+    <div class="panel" style="border-left:3px solid #7986cb;">
+      <strong style="color:#7986cb; font-size:0.8em;">📚 Unequal documentation coverage</strong>
+      <p style="font-size:0.68em; color:#c9d1d9; margin:0.3em 0 0;">
+        HackerRank: 436 articles &nbsp;·&nbsp; Claude: 321 &nbsp;·&nbsp; Visa: <strong>13 articles</strong><br/><br/>
+        When documentation is thin, the agent needs to know when to give up and escalate instead of guessing.
+      </p>
+    </div>
+
+  </div>
+  <aside class="notes">The vocabulary mismatch (slide 1, top-left) was the biggest technical challenge. Query expansion was the fix for it.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 5 — SOLUTION OVERVIEW
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Our Solution: A RAG-Based AI Agent</h2>
+
+  <div class="panel" style="text-align:center; padding:1em; margin-bottom:0.6em; border-color:var(--hr-green);">
+    <p style="font-size:0.9em; color:#e6edf3; margin:0; line-height:1.6;">
+      The agent <strong style="color:var(--hr-teal);">searches the documentation</strong> for the most relevant information,
+      then uses <strong style="color:var(--hr-green);">AI (Claude)</strong> to write a grounded, accurate answer —
+      or decide to escalate.
+    </p>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:0.6em;">
+    <div class="stat"><span class="num">770+</span><span class="lbl">support articles indexed</span></div>
+    <div class="stat"><span class="num">29</span><span class="lbl">tickets processed</span></div>
+    <div class="stat"><span class="num">0</span><span class="lbl">invented facts</span></div>
+  </div>
+
+  <div class="panel" style="font-size:0.72em; border-color:var(--hr-border);">
+    <strong style="color:var(--hr-muted); font-size:0.85em; text-transform:uppercase; letter-spacing:0.05em;">What is RAG?</strong>
+    <p style="color:#c9d1d9; margin:0.3em 0 0; line-height:1.6;">
+      <strong style="color:#e6edf3;">R</strong>etrieval-<strong style="color:#e6edf3;">A</strong>ugmented <strong style="color:#e6edf3;">G</strong>eneration.
+      Instead of asking AI to answer from memory (which leads to errors), we first
+      <strong>find the relevant documents</strong>, then ask AI to answer
+      <strong>only based on those documents</strong>. Think of it like giving the AI
+      an open-book exam instead of a closed-book one.
+    </p>
+  </div>
+
+  <aside class="notes">RAG is the key concept. The analogy of open-book vs. closed-book exam is very intuitive for non-technical audiences.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 6 — HOW IT WORKS (SIMPLE PIPELINE)
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>How It Works — Step by Step</h2>
+
+  <div style="display:flex; gap:0.8em; margin-top:0.3em; align-items:stretch;">
+
+    <!-- Pipeline diagram -->
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:0.15em;">
+      <div class="arch-box" style="border-color:var(--hr-muted);">
+        📥 <strong>Support ticket arrives</strong><br/>
+        <span style="font-size:0.82em; color:var(--hr-muted);">issue · subject · company</span>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-box" style="border-color:#ffa500;">
+        🔍 <strong style="color:#ffa500;">Step 1 — Expand the search</strong><br/>
+        <span style="font-size:0.82em;">AI generates 3 different search queries from the ticket</span>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-box" style="border-color:var(--hr-teal);">
+        📚 <strong style="color:var(--hr-teal);">Step 2 — Find relevant articles</strong><br/>
+        <span style="font-size:0.82em;">Search 770+ articles · pick the best 7 matches</span>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-box" style="border-color:var(--hr-green);">
+        🤖 <strong style="color:var(--hr-green);">Step 3 — Generate the response</strong><br/>
+        <span style="font-size:0.82em;">Claude reads the articles + ticket → writes reply or escalates</span>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-box" style="border-color:var(--hr-muted);">
+        📤 <strong>Output row in CSV</strong><br/>
+        <span style="font-size:0.82em;">status · product_area · response · justification · request_type</span>
+      </div>
+    </div>
+
+    <!-- Key notes -->
+    <div style="flex:0.9; display:flex; flex-direction:column; gap:0.4em; justify-content:center;">
+      <div class="panel" style="font-size:0.68em; border-left:3px solid #ffa500;">
+        <strong style="color:#ffa500;">Why Step 1 matters</strong><br/>
+        Customers use their own words. Searching with multiple different phrasings finds articles that a single search might miss.
+      </div>
+      <div class="panel" style="font-size:0.68em; border-left:3px solid var(--hr-teal);">
+        <strong style="color:var(--hr-teal);">Why Step 2 uses "meaning" not keywords</strong><br/>
+        Articles are stored as mathematical patterns (embeddings). The search finds <em>semantically similar</em> content, not just keyword matches.
+      </div>
+      <div class="panel" style="font-size:0.68em; border-left:3px solid var(--hr-green);">
+        <strong style="color:var(--hr-green);">What guides Step 3</strong><br/>
+        A carefully written set of rules tells Claude <em>exactly</em> when to answer vs. escalate. No guessing.
+      </div>
+    </div>
+
+  </div>
+  <aside class="notes">This is the core pipeline. Each step has a clear, single responsibility. Step 1 (query expansion) was the most impactful improvement.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 7 — ANSWER vs ESCALATE LOGIC
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>When to Answer vs. When to Escalate</h2>
+  <p style="font-size:0.72em; color:var(--hr-muted); margin-bottom:0.5em;">The agent follows explicit rules — no ambiguity</p>
+
+  <div class="grid-2" style="gap:0.55em;">
+
+    <div class="panel" style="border-left:4px solid var(--hr-green);">
+      <strong style="color:var(--hr-green); font-size:0.82em;">✅ Answer directly when...</strong>
+      <ul style="margin-top:0.3em; font-size:0.7em;">
+        <li>There's a clear FAQ with a documented answer</li>
+        <li>The user can self-serve (e.g. reset a password)</li>
+        <li>It's a "how-to" question covered in the docs</li>
+        <li>It's a feature request — acknowledge politely</li>
+        <li>The ticket is off-topic or not a real question — mark as <em>invalid</em></li>
+      </ul>
+    </div>
+
+    <div class="panel" style="border-left:4px solid #ff5555;">
+      <strong style="color:#ff5555; font-size:0.82em;">🔴 Escalate to a human when...</strong>
+      <ul style="margin-top:0.3em; font-size:0.7em;">
+        <li>Fraud or identity theft is suspected</li>
+        <li>The user's account is locked with no self-serve fix</li>
+        <li>A specific transaction or payment needs review</li>
+        <li>The user demands impossible actions (e.g. "change my score")</li>
+        <li>Legal threats or harassment is involved</li>
+        <li>The question is too vague to answer safely</li>
+        <li>Subscription changes, refunds, or chargebacks</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="panel" style="margin-top:0.45em; font-size:0.7em; border-color:var(--hr-border); color:var(--hr-muted);">
+    💡 These rules were written in plain English inside the system prompt — easy for the whole team to read, review, and update.
+  </div>
+  <aside class="notes">Plain-English rules in the system prompt. Anyone on the team can audit and improve them without touching the code.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 8 — REAL EXAMPLES
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Real Examples from the Output</h2>
+  <p style="font-size:0.62em; color:var(--hr-muted); margin-bottom:0.4em;">Three real tickets — what the agent received and decided</p>
+
+  <div style="display:flex; flex-direction:column; gap:0.42em;">
+
+    <div class="panel" style="font-size:0.65em; border-left:3px solid var(--hr-green);">
+      <div style="display:flex; gap:0.5em; align-items:baseline; flex-wrap:wrap;">
+        <span class="tag tag-green">✅ Answered</span>
+        <span class="tag tag-blue">HackerRank — Feature Change</span>
+      </div>
+      <p style="color:var(--hr-muted); margin:0.3em 0 0.15em; font-style:italic;">"I cannot see the apply tab."</p>
+      <p style="color:#c9d1d9; margin:0;">
+        <strong style="color:#e6edf3;">Why answered:</strong> The docs confirm the Apply tab was removed. A clear, factual answer exists. No human needed.
+      </p>
+    </div>
+
+    <div class="panel" style="font-size:0.65em; border-left:3px solid #ff5555;">
+      <div style="display:flex; gap:0.5em; align-items:baseline; flex-wrap:wrap;">
+        <span class="tag tag-red">🔴 Escalated</span>
+        <span class="tag tag-orange">Claude — Account Access</span>
+      </div>
+      <p style="color:var(--hr-muted); margin:0.3em 0 0.15em; font-style:italic;">"I lost access to my Claude team workspace after our IT admin removed my seat. Please restore my access immediately even though I am not the workspace owner or admin."</p>
+      <p style="color:#c9d1d9; margin:0;">
+        <strong style="color:#e6edf3;">Why escalated:</strong> Restoring a seat requires admin-level action. The user isn't the admin. A human needs to co-ordinate with their organization.
+      </p>
+    </div>
+
+    <div class="panel" style="font-size:0.65em; border-left:3px solid #ff5555;">
+      <div style="display:flex; gap:0.5em; align-items:baseline; flex-wrap:wrap;">
+        <span class="tag tag-red">🔴 Escalated</span>
+        <span class="tag tag-orange">HackerRank — Impossible Request</span>
+      </div>
+      <p style="color:var(--hr-muted); margin:0.3em 0 0.15em; font-style:italic;">"Please review my answers, increase my score, and tell the company to move me to the next round because the platform must have graded me unfairly."</p>
+      <p style="color:#c9d1d9; margin:0;">
+        <strong style="color:#e6edf3;">Why escalated:</strong> The request asks for actions outside the platform's scope (score override, influencing a hiring decision). No legitimate self-serve path exists.
+      </p>
+    </div>
+
+  </div>
+  <aside class="notes">These three examples cover the full spectrum: a simple FAQ, an access problem needing admin help, and an out-of-scope demand.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 9 — TECH AT A GLANCE
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Technology at a Glance</h2>
+
+  <div class="grid-2" style="gap:0.6em; margin-top:0.3em;">
+
+    <div class="panel" style="border-left:3px solid var(--hr-green);">
+      <strong style="color:var(--hr-green); font-size:0.8em;">🤖 AI / Language Model</strong>
+      <ul style="margin-top:0.3em; font-size:0.72em;">
+        <li><strong>Claude Sonnet</strong> (Anthropic) — reads tickets and writes replies</li>
+        <li><strong>Voyage AI</strong> — turns text into searchable math patterns</li>
+        <li>Local fallback with Ollama (no API costs during testing)</li>
+      </ul>
+    </div>
+
+    <div class="panel" style="border-left:3px solid var(--hr-teal);">
+      <strong style="color:var(--hr-teal); font-size:0.8em;">🗄️ Data &amp; Storage</strong>
+      <ul style="margin-top:0.3em; font-size:0.72em;">
+        <li><strong>770+ markdown articles</strong> scraped from three help centers</li>
+        <li><strong>ChromaDB</strong> — a local database for semantic search</li>
+        <li>~4 700 searchable article sections stored</li>
+      </ul>
+    </div>
+
+    <div class="panel" style="border-left:3px solid #7986cb;">
+      <strong style="color:#7986cb; font-size:0.8em;">🐍 Code</strong>
+      <ul style="margin-top:0.3em; font-size:0.72em;">
+        <li>Python 3.11 — runs entirely from the terminal</li>
+        <li>Four clean modules: <code>indexer</code>, <code>agent</code>, <code>config</code>, <code>main</code></li>
+        <li>Secrets stored in <code>.env</code> — never hardcoded</li>
+      </ul>
+    </div>
+
+    <div class="panel" style="border-left:3px solid #ffa500;">
+      <strong style="color:#ffa500; font-size:0.8em;">⚙️ How to run</strong>
+      <ul style="margin-top:0.3em; font-size:0.72em;">
+        <li><code>pip install -r requirements.txt</code></li>
+        <li><code>python indexer.py</code> — build the search index once</li>
+        <li><code>python main.py</code> — process all tickets → <code>output.csv</code></li>
+      </ul>
+    </div>
+
+  </div>
+  <aside class="notes">Kept the stack small and standard. Python + ChromaDB + Anthropic API + Voyage AI. No exotic dependencies.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 10 — KEY TAKEAWAYS
+═══════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Key Takeaways</h2>
+
+  <div style="display:flex; flex-direction:column; gap:0.45em; margin-top:0.4em;">
+
+    <div class="panel" style="font-size:0.78em; border-left:3px solid var(--hr-green);">
+      <strong style="color:var(--hr-green);">Open-book beats closed-book — always</strong>
+      <p style="color:#c9d1d9; margin:0.2em 0 0;">
+        Giving the AI the relevant documentation before asking it to answer eliminates hallucinations. RAG is not optional for a support agent — it's the foundation.
+      </p>
+    </div>
+
+    <div class="panel" style="font-size:0.78em; border-left:3px solid var(--hr-teal);">
+      <strong style="color:var(--hr-teal);">Search with multiple phrasings, not one</strong>
+      <p style="color:#c9d1d9; margin:0.2em 0 0;">
+        Generating 3 different search queries from each ticket before searching was the single biggest quality improvement. Real customers don't use documentation language — your search must bridge that gap.
+      </p>
+    </div>
+
+    <div class="panel" style="font-size:0.78em; border-left:3px solid #ffa500;">
+      <strong style="color:#ffa500;">Write escalation rules in plain English</strong>
+      <p style="color:#c9d1d9; margin:0.2em 0 0;">
+        Explicit, readable rules in the system prompt are easy to audit, debate, and improve. Anyone on the team can suggest a change — no ML expertise required.
+      </p>
+    </div>
+
+    <div class="panel" style="font-size:0.78em; border-left:3px solid #7986cb;">
+      <strong style="color:#7986cb;">Build locally first, then go to the cloud</strong>
+      <p style="color:#c9d1d9; margin:0.2em 0 0;">
+        Running a local model (Ollama) during development meant zero API costs during iteration. Switching to the production model (Claude Sonnet) was a single environment variable change.
+      </p>
+    </div>
+
+  </div>
+  <aside class="notes">Four learnings that apply to any RAG-based product, not just this challenge.</aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SLIDE 11 — Q&A
+═══════════════════════════════════════════════════════════ -->
+<section class="title-deck">
+  <h1 style="font-size:2.2em; margin-bottom:0.3em;">Questions?</h1>
+  <p style="font-size:0.68em; color:var(--hr-muted); margin-bottom:1em;">Architecture, design decisions, the AI stack, or anything else</p>
+  <hr style="border-color:var(--hr-border); margin: 0.6em auto; width:40%;" />
+  <div class="grid-3" style="max-width:620px; margin:0.6em auto 0.8em;">
+    <div class="stat"><span class="num">770+</span><span class="lbl">articles indexed</span></div>
+    <div class="stat"><span class="num">29</span><span class="lbl">tickets triaged</span></div>
+    <div class="stat"><span class="num">0</span><span class="lbl">invented facts</span></div>
+  </div>
+  <p style="font-size:0.55em; color:var(--hr-muted);">
+    Built in 24 hours · HackerRank Orchestrate · May 1–2, 2026
+  </p>
+  <aside class="notes">Thank you. Happy to go deep on any part of the design.</aside>
+</section>
+
+</div><!-- /.slides -->
+</div><!-- /.reveal -->
+
+<!-- Reveal.js core -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<!-- Plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'fade',
+    controls: true,
+    progress: true,
+    center: false,
+    width: 1200,
+    height: 700,
+    margin: 0.04,
+    plugins: [ RevealNotes, RevealHighlight ],
+  });
+</script>
+</body>
+</html>
